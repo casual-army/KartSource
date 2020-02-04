@@ -123,6 +123,8 @@ extern consvar_t cv_kartencorechance;;
 extern consvar_t cv_kartspeedometer;
 extern consvar_t cv_kartvoices;
 
+extern consvar_t cv_kartitemtable;
+
 extern consvar_t cv_karteliminatelast;
 
 extern consvar_t cv_votetime;

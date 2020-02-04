@@ -668,6 +668,86 @@ static INT32 K_KartItemOddsRace[NUMKARTRESULTS][10] =
 			   /*Jawz x2*/ { 0, 0, 0, 1, 2, 0, 0, 0, 0, 0 }  // Jawz x2
 };
 
+static INT32 K_KartItemOddsNew[NUMKARTRESULTS][10] =
+{
+				//P-Odds	 0  1  2  3  4  5  6  7  8  9
+			   /*Sneaker*/ {20, 0, 0, 3, 4, 5, 1, 0, 0, 0 }, // Sneaker
+		/*Rocket Sneaker*/ { 0, 0, 0, 0, 0, 0, 3, 4, 4, 0 }, // Rocket Sneaker
+		 /*Invincibility*/ { 0, 0, 0, 0, 0, 1, 3, 6, 7, 0 }, // Invincibility
+				/*Banana*/ { 0, 7, 0, 0, 0, 0, 0, 0, 0, 0 }, // Banana
+		/*Eggman Monitor*/ { 0, 3, 1, 1, 0, 0, 0, 0, 0, 0 }, // Eggman Monitor
+			  /*Orbinaut*/ { 0, 8, 2, 2, 2, 0, 0, 0, 0, 0 }, // Orbinaut
+				  /*Jawz*/ { 0, 0, 5, 3, 1, 1, 0, 0, 0, 0 }, // Jawz
+				  /*Mine*/ { 0, 0, 1, 1, 1, 0, 0, 0, 0, 0 }, // Mine
+			   /*Ballhog*/ { 0, 0, 1, 1, 2, 2, 0, 0, 0, 0 }, // Ballhog
+   /*Self-Propelled Bomb*/ { 0, 0, 5, 2, 3, 2, 0, 0, 0,20 }, // Self-Propelled Bomb
+				  /*Grow*/ { 0, 0, 0, 0, 1, 2, 4, 1, 0, 0 }, // Grow
+				/*Shrink*/ { 0, 0, 0, 0, 0, 0, 0, 4, 7, 0 }, // Shrink
+		/*Thunder Shield*/ { 0, 1, 1, 1, 1, 1, 0, 0, 0, 0 }, // Thunder Shield
+			   /*Hyudoro*/ { 0, 0, 0, 0, 0, 2, 3, 2, 0, 0 }, // Hyudoro
+		   /*Pogo Spring*/ { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 }, // Pogo Spring
+		  /*Kitchen Sink*/ { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 }, // Kitchen Sink
+			/*Sneaker x3*/ { 0, 0, 0, 0, 0, 0, 2, 3, 2, 0 }, // Sneaker x3
+			 /*Banana x3*/ { 0, 1, 1, 2, 1, 0, 0, 0, 0, 0 }, // Banana x3
+			/*Banana x10*/ { 0, 0, 1, 1, 1, 0, 0, 0, 0, 0 }, // Banana x10
+		   /*Orbinaut x3*/ { 0, 0, 1, 1, 1, 1, 2, 0, 0, 0 }, // Orbinaut x3
+		   /*Orbinaut x4*/ { 0, 0, 0, 0, 1, 1, 0, 0, 0, 0 }, // Orbinaut x4
+			   /*Jawz x2*/ { 0, 0, 1, 2, 1, 2, 1, 0, 0, 0 }  // Jawz x2
+};
+
+static INT32 K_KartItemOddsBoost[NUMKARTRESULTS][10] =
+{
+				//P-Odds	 0  1  2  3  4  5  6  7  8  9
+			   /*Sneaker*/ { 0,17,18,18,10, 8, 0, 0, 0, 0 }, // Sneaker
+		/*Rocket Sneaker*/ { 0, 0, 0, 0, 0, 0,10,12,20, 0 }, // Rocket Sneaker
+		 /*Invincibility*/ { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 }, // Invincibility
+				/*Banana*/ { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 }, // Banana
+		/*Eggman Monitor*/ { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 }, // Eggman Monitor
+			  /*Orbinaut*/ { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 }, // Orbinaut
+				  /*Jawz*/ { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 }, // Jawz
+				  /*Mine*/ { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 }, // Mine
+			   /*Ballhog*/ { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 }, // Ballhog
+   /*Self-Propelled Bomb*/ { 0, 0, 0, 0, 0, 0, 0, 0, 0,20 }, // Self-Propelled Bomb
+				  /*Grow*/ { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 }, // Grow
+				/*Shrink*/ { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 }, // Shrink
+		/*Thunder Shield*/ { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 }, // Thunder Shield
+			   /*Hyudoro*/ { 0, 0, 0, 0, 1, 4, 4, 2, 0, 0 }, // Hyudoro
+		   /*Pogo Spring*/ { 0, 3, 2, 1, 1, 1, 1, 1, 0, 0 }, // Pogo Spring
+		  /*Kitchen Sink*/ { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 }, // Kitchen Sink
+			/*Sneaker x3*/ {20, 0, 0, 1, 8, 7, 5, 5, 0, 0 }, // Sneaker x3
+			 /*Banana x3*/ { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 }, // Banana x3
+			/*Banana x10*/ { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 }, // Banana x10
+		   /*Orbinaut x3*/ { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 }, // Orbinaut x3
+		   /*Orbinaut x4*/ { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 }, // Orbinaut x4
+			   /*Jawz x2*/ { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 }  // Jawz x2
+};
+
+static INT32 K_KartItemOddsRNGesus[NUMKARTRESULTS][10] =
+{
+				//P-Odds	 0  1  2  3  4  5  6  7  8  9
+			   /*Sneaker*/ {20, 1, 1, 1, 1, 1, 1, 1, 1, 0 }, // Sneaker
+		/*Rocket Sneaker*/ { 0, 1, 1, 1, 1, 1, 1, 1, 1, 0 }, // Rocket Sneaker
+		 /*Invincibility*/ { 0, 1, 1, 1, 1, 1, 1, 1, 1, 0 }, // Invincibility
+				/*Banana*/ { 0, 1, 1, 0, 0, 0, 0, 0, 0, 0 }, // Banana
+		/*Eggman Monitor*/ { 0, 1, 1, 1, 1, 1, 1, 1, 1, 0 }, // Eggman Monitor
+			  /*Orbinaut*/ { 0, 1, 1, 1, 1, 1, 1, 1, 1, 0 }, // Orbinaut
+				  /*Jawz*/ { 0, 1, 1, 1, 1, 1, 1, 1, 1, 0 }, // Jawz
+				  /*Mine*/ { 0, 1, 1, 1, 1, 1, 1, 1, 1, 0 }, // Mine
+			   /*Ballhog*/ { 0, 1, 1, 1, 1, 1, 1, 1, 1, 0 }, // Ballhog
+   /*Self-Propelled Bomb*/ { 0, 1, 1, 1, 1, 1, 1, 1, 1,20 }, // Self-Propelled Bomb
+				  /*Grow*/ { 0, 1, 1, 1, 1, 1, 1, 1, 1, 0 }, // Grow
+				/*Shrink*/ { 0, 0, 0, 1, 1, 1, 1, 1, 1, 0 }, // Shrink
+		/*Thunder Shield*/ { 0, 1, 1, 1, 1, 1, 1, 1, 1, 0 }, // Thunder Shield
+			   /*Hyudoro*/ { 0, 1, 1, 1, 1, 1, 1, 1, 1, 0 }, // Hyudoro
+		   /*Pogo Spring*/ { 0, 1, 1, 1, 1, 1, 1, 1, 1, 0 }, // Pogo Spring
+		  /*Kitchen Sink*/ { 0, 1, 1, 1, 1, 1, 1, 1, 1, 0 }, // Kitchen Sink
+			/*Sneaker x3*/ { 0, 1, 1, 1, 1, 1, 1, 1, 1, 0 }, // Sneaker x3
+			 /*Banana x3*/ { 0, 1, 1, 1, 1, 1, 1, 1, 1, 0 }, // Banana x3
+			/*Banana x10*/ { 0, 1, 1, 1, 1, 1, 1, 1, 1, 0 }, // Banana x10
+		   /*Orbinaut x3*/ { 0, 1, 1, 1, 1, 1, 1, 1, 1, 0 }, // Orbinaut x3
+		   /*Orbinaut x4*/ { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 }, // Orbinaut x4
+			   /*Jawz x2*/ { 0, 1, 1, 1, 1, 1, 1, 1, 1, 0 }  // Jawz x2
+};
 static INT32 K_KartItemOddsBattle[NUMKARTRESULTS][6] =
 {
 				//P-Odds	 0  1  2  3  4  5
@@ -799,7 +879,17 @@ static INT32 K_KartGetItemOdds(UINT8 pos, SINT8 item, fixed_t mashed, boolean sp
 	if (G_BattleGametype())
 		newodds = K_KartItemOddsBattle[item-1][pos];
 	else
-		newodds = K_KartItemOddsRace[item-1][pos];
+		switch (cv_kartitemtable.value)
+		{
+			case 1: //New
+				newodds = K_KartItemOddsNew[item - 1][pos]; break;
+			case 2: //Boost
+				newodds = K_KartItemOddsBoost[item - 1][pos]; break;
+			case 3: //RNGesus
+				newodds = K_KartItemOddsRNGesus[item - 1][pos]; break;
+			default: //Classic
+				newodds = K_KartItemOddsRace[item - 1][pos];
+		}
 
 	// Base multiplication to ALL item odds to simulate fractional precision
 	newodds *= 4;

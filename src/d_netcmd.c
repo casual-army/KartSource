@@ -376,6 +376,9 @@ consvar_t cv_kartspeedometer = {"kartdisplayspeed", "Off", CV_SAVE, kartspeedome
 static CV_PossibleValue_t kartvoices_cons_t[] = {{0, "Never"}, {1, "Tasteful"}, {2, "Meme"}, {0, NULL}};
 consvar_t cv_kartvoices = {"kartvoices", "Tasteful", CV_SAVE, kartvoices_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
 
+static CV_PossibleValue_t kartitemtable_cons_t[] = { {0, "Classic"}, {1, "New"}, {2, "Boost"}, {3, "RNGesus"}, {0, NULL}};
+consvar_t cv_kartitemtable = { "kartitemtable", "Classic", CV_NETVAR, kartitemtable_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL };
+
 consvar_t cv_karteliminatelast = {"karteliminatelast", "Yes", CV_NETVAR|CV_CHEAT|CV_CALL|CV_NOSHOWHELP, CV_YesNo, KartEliminateLast_OnChange, 0, NULL, NULL, 0, 0, NULL};
 
 static CV_PossibleValue_t kartdebugitem_cons_t[] = {{-1, "MIN"}, {NUMKARTITEMS-1, "MAX"}, {0, NULL}};
