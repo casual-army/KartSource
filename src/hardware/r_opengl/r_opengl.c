@@ -2021,7 +2021,7 @@ EXPORT void HWRAPI(PostImgRedraw) (float points[SCREENVERTS][SCREENVERTS][2])
 	INT32 x, y;
 	float float_x, float_y, float_nextx, float_nexty;
 	float xfix, yfix;
-	INT32 texsize = 2048;
+	INT32 texsize = 4096;
 
 	const float blackBack[16] =
 	{
@@ -2121,7 +2121,7 @@ EXPORT void HWRAPI(FlushScreenTextures) (void)
 // Create Screen to fade from
 EXPORT void HWRAPI(StartScreenWipe) (void)
 {
-	INT32 texsize = 2048;
+	INT32 texsize = 4096;
 	boolean firstTime = (startScreenWipe == 0);
 
 	// Use a power of two texture, dammit
@@ -2152,7 +2152,7 @@ EXPORT void HWRAPI(StartScreenWipe) (void)
 // Create Screen to fade to
 EXPORT void HWRAPI(EndScreenWipe)(void)
 {
-	INT32 texsize = 2048;
+	INT32 texsize = 4096;
 	boolean firstTime = (endScreenWipe == 0);
 
 	// Use a power of two texture, dammit
@@ -2185,7 +2185,7 @@ EXPORT void HWRAPI(EndScreenWipe)(void)
 EXPORT void HWRAPI(DrawIntermissionBG)(void)
 {
 	float xfix, yfix;
-	INT32 texsize = 2048;
+	INT32 texsize = 4096;
 
 	const float screenVerts[12] =
 	{
@@ -2232,7 +2232,7 @@ EXPORT void HWRAPI(DrawIntermissionBG)(void)
 // Do screen fades!
 EXPORT void HWRAPI(DoScreenWipe)(void)
 {
-	INT32 texsize = 2048;
+	INT32 texsize = 4096;
 	float xfix, yfix;
 
 	INT32 fademaskdownloaded = tex_downloaded; // the fade mask that has been set
@@ -2324,7 +2324,7 @@ EXPORT void HWRAPI(DoScreenWipe)(void)
 // Create a texture from the screen.
 EXPORT void HWRAPI(MakeScreenTexture) (void)
 {
-	INT32 texsize = 2048;
+	INT32 texsize = 4096;
 	boolean firstTime = (screentexture == 0);
 
 	// Use a power of two texture, dammit
@@ -2352,9 +2352,114 @@ EXPORT void HWRAPI(MakeScreenTexture) (void)
 	tex_downloaded = screentexture;
 }
 
+EXPORT void HWRAPI(RenderVhsEffect) (INT16 upbary, INT16 downbary, UINT8 updistort, UINT8 downdistort, UINT8 barsize)
+{
+	INT32 texsize = 4096;
+	float xfix, yfix;
+	float fix[8];
+	GLubyte color[4] = {255, 255, 255, 255};
+	float i;
+
+	float screenVerts[12] =
+	{
+		-1.0f, -1.0f, 1.0f,
+		-1.0f, 1.0f, 1.0f,
+		1.0f, 1.0f, 1.0f,
+		1.0f, -1.0f, 1.0f
+	};
+
+	if(screen_width <= 1024)
+		texsize = 1024;
+	if(screen_width <= 512)
+		texsize = 512;
+
+	xfix = 1/((float)(texsize)/((float)((screen_width))));
+	yfix = 1/((float)(texsize)/((float)((screen_height))));
+
+	// Slight fuzziness
+	MakeScreenTexture();
+	SetBlend(PF_Modulated|PF_Translucent|PF_NoDepthTest);
+	pglBindTexture(GL_TEXTURE_2D, screentexture);
+
+	fix[2] = (float)(rand() / 255) / -22000 * xfix;
+
+	for (i = 0; i < 1; i += 0.01)
+	{
+		color[3] = (float)(rand() * 70 / 256) + 40;
+		fix[0] = fix[2];
+		fix[2] = (float)(rand() / 255) / -22000 * xfix;
+		fix[6] = fix[0] + xfix;
+		fix[4] = fix[2] + xfix;
+		fix[1] = fix[7] = i*yfix;
+		fix[3] = fix[5] = (i+0.015)*yfix;
+
+		screenVerts[1] = screenVerts[10] = 2*i - 1.0f;
+		screenVerts[4] = screenVerts[7] = screenVerts[1] + 0.03;
+
+		pglColor4ubv(color);
+
+		pglTexCoordPointer(2, GL_FLOAT, 0, fix);
+		pglVertexPointer(3, GL_FLOAT, 0, screenVerts);
+		pglDrawArrays(GL_TRIANGLE_FAN, 0, 4);
+	}
+
+	// Upward bar
+	MakeScreenTexture();
+	pglBindTexture(GL_TEXTURE_2D, screentexture);
+	color[0] = color[1] = color[2] = 190;
+	color[3] = 250;
+	pglColor4ubv(color);
+
+	fix[0] = 0.0f;
+	fix[6] = xfix;
+	fix[2] = (float)updistort / screen_width * xfix;
+	fix[4] = fix[2] + fix[6];
+
+	screenVerts[1] = screenVerts[10] = 2.0f*upbary/screen_height - 1.0f;
+	screenVerts[4] = screenVerts[7] = screenVerts[1] + (float)barsize/screen_height;
+
+	fix[1] = fix[7] = (float)upbary/screen_height * yfix;
+	fix[3] = fix[5] = fix[1] + (float)barsize/2/screen_height * yfix;
+
+	pglTexCoordPointer(2, GL_FLOAT, 0, fix);
+	pglVertexPointer(3, GL_FLOAT, 0, screenVerts);
+	pglDrawArrays(GL_TRIANGLE_FAN, 0, 4);
+
+	fix[1] = fix[7] += (fix[3] - fix[7])*2;
+	screenVerts[1] = screenVerts[10] += (screenVerts[4] - screenVerts[1])*2;
+	pglTexCoordPointer(2, GL_FLOAT, 0, fix);
+	pglVertexPointer(3, GL_FLOAT, 0, screenVerts);
+	pglDrawArrays(GL_TRIANGLE_FAN, 0, 4);
+
+	// Downward bar
+	MakeScreenTexture();
+	pglBindTexture(GL_TEXTURE_2D, screentexture);
+
+	fix[0] = 0.0f;
+	fix[6] = xfix;
+	fix[2] = (float)downdistort / screen_width * -xfix;
+	fix[4] = fix[2] + fix[6];
+
+	screenVerts[1] = screenVerts[10] = 2.0f*downbary/screen_height - 1.0f;
+	screenVerts[4] = screenVerts[7] = screenVerts[1] + (float)barsize/screen_height;
+
+	fix[1] = fix[7] = (float)downbary/screen_height * yfix;
+	fix[3] = fix[5] = fix[1] + (float)barsize/2/screen_height * yfix;
+
+	pglTexCoordPointer(2, GL_FLOAT, 0, fix);
+	pglVertexPointer(3, GL_FLOAT, 0, screenVerts);
+	pglDrawArrays(GL_TRIANGLE_FAN, 0, 4);
+
+	fix[1] = fix[7] += (fix[3] - fix[7])*2;
+	screenVerts[1] = screenVerts[10] += (screenVerts[4] - screenVerts[1])*2;
+	pglTexCoordPointer(2, GL_FLOAT, 0, fix);
+	pglVertexPointer(3, GL_FLOAT, 0, screenVerts);
+	pglDrawArrays(GL_TRIANGLE_FAN, 0, 4);
+}
+
 EXPORT void HWRAPI(MakeScreenFinalTexture) (void)
 {
-	INT32 texsize = 2048;
+	INT32 texsize = 4096;
 	boolean firstTime = (finalScreenTexture == 0);
 
 	// Use a power of two texture, dammit
@@ -2388,7 +2493,7 @@ EXPORT void HWRAPI(DrawScreenFinalTexture)(int width, int height)
 	float origaspect, newaspect;
 	float xoff = 1, yoff = 1; // xoffset and yoffset for the polygon to have black bars around the screen
 	FRGBAFloat clearColour;
-	INT32 texsize = 2048;
+	INT32 texsize = 4096;
 
 	float off[12];
 	float fix[8];
