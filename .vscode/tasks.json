@@ -24,7 +24,7 @@
                 "WINDOWSHELL=1",
                 "SDL=1",
                 "NOOBJDUMP=1",
-                "JOININGAME=0"
+                "DEVELOP=1"
             ],
             "problemMatcher": [
                 "$gcc"
