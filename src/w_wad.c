@@ -933,8 +933,8 @@ UINT16 W_InitFile(const char *filename, const char *lumpname, UINT16 *wadnump)
 	//
 	CONS_Printf(M_GetText("Added file %s (%u lumps)\n"), filename, numlumps);
 	
-	wadfiles[numwadfiles] = wadfile;
-	numwadfiles++; // must come BEFORE W_LoadDehackedLumps, so any addfile called by COM_BufInsertText called by Lua doesn't overwrite what we just loaded
+	//wadfiles[numwadfiles] = wadfile;
+	//numwadfiles++; // must come BEFORE W_LoadDehackedLumps, so any addfile called by COM_BufInsertText called by Lua doesn't overwrite what we just loaded
 
 #ifdef HWRENDER
 	if (rendermode == render_opengl)
