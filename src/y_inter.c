@@ -1090,7 +1090,7 @@ void Y_VoteDrawer(void)
 				sizeadd--;
 			}
 
-			if (!levelinfo[i].encore)
+			//if (!levelinfo[i].encore)
 				V_DrawSmallScaledPatch(BASEVIDWIDTH-100, y, V_SNAPTORIGHT, pic);
 			/*
 			else
@@ -1116,13 +1116,15 @@ void Y_VoteDrawer(void)
 		}
 		else
 		{
-			if (!levelinfo[i].encore)
+			//if (!levelinfo[i].encore)
 				V_DrawTinyScaledPatch(BASEVIDWIDTH-60, y, V_SNAPTORIGHT, pic);
+			/*
 			else
 			{
 				V_DrawFixedPatch((BASEVIDWIDTH-20)<<FRACBITS, y<<FRACBITS, FRACUNIT/4, V_FLIP|V_SNAPTORIGHT, pic, 0);
 				V_DrawFixedPatch((BASEVIDWIDTH-40)<<FRACBITS, (y<<FRACBITS) + (25<<(FRACBITS-1)) - rubyheight, FRACUNIT/2, V_SNAPTORIGHT, rubyicon, NULL);
 			}
+			*/
 
 			if (levelinfo[i].gts)
 			{
@@ -1161,13 +1163,15 @@ void Y_VoteDrawer(void)
 					V_DrawFill(x-1, y-1, 42, 27, levelinfo[votes[i]].gtc|V_SNAPTOLEFT);
 			}
 
-			if (!levelinfo[votes[i]].encore)
+			//if (!levelinfo[votes[i]].encore)
 				V_DrawTinyScaledPatch(x, y, V_SNAPTOLEFT, pic);
+			/*
 			else
 			{
 				V_DrawFixedPatch((x+40)<<FRACBITS, (y)<<FRACBITS, FRACUNIT/4, V_SNAPTOLEFT|V_FLIP, pic, 0);
 				V_DrawFixedPatch((x+20)<<FRACBITS, (y<<FRACBITS) + (25<<(FRACBITS-1)) - rubyheight, FRACUNIT/2, V_SNAPTOLEFT, rubyicon, NULL);
 			}
+			*/
 
 			if (levelinfo[votes[i]].gts)
 			{
