@@ -79,6 +79,7 @@ static size_t con_width;           // columns of chars, depend on vid mode width
 
 static size_t con_scrollup;        // how many rows of text to scroll up (pgup/pgdn)
 UINT32 con_scalefactor;            // text size scale factor
+UINT32 con_yscalefactor;
 
 // hold 32 last lines of input for history
 #define CON_MAXPROMPTCHARS 256
@@ -454,6 +455,11 @@ static void CON_RecalcSize(void)
 		con_scalefactor = vid.dupx;
 		break;
 	}
+
+	con_yscalefactor = con_scalefactor * vid.yscale;
+
+	//if (vid.width == 640 && vid.height == 800)
+		//con_yscalefactor *= vid.yscale;
 
 	con_recalc = false;
 
@@ -1424,7 +1430,7 @@ static void CON_DrawInput(void)
 	UINT8 lellip = 0, rellip = 0;
 	INT32 x, y, i;
 
-	y = con_curlines - 12 * con_scalefactor;
+	y = con_curlines - 12 * con_yscalefactor;
 	x = charwidth*2;
 
 	clen = con_width-13;
@@ -1472,7 +1478,7 @@ static void CON_DrawInput(void)
 	{
 		x -= charwidth*3;
 		if (input_sel < c)
-			V_DrawFill(x, y, charwidth*3, (10 * con_scalefactor), 107 | V_NOSCALESTART);
+			V_DrawFill(x, y, charwidth*3, (10 * con_yscalefactor), 107 | V_NOSCALESTART);
 		for (i = 0; i < 3; ++i, x += charwidth)
 			V_DrawCharacter(x, y, '.' | cv_constextsize.value | V_GRAYMAP | V_NOSCALESTART, !cv_allcaps.value);
 	}
@@ -1483,21 +1489,21 @@ static void CON_DrawInput(void)
 	{
 		if ((input_sel > c && input_cur <= c) || (input_sel <= c && input_cur > c))
 		{
-			V_DrawFill(x, y, charwidth, (10 * con_scalefactor), 107 | V_NOSCALESTART);
+			V_DrawFill(x, y, charwidth, (10 * con_yscalefactor), 107 | V_NOSCALESTART);
 			V_DrawCharacter(x, y, p[c] | cv_constextsize.value | V_YELLOWMAP | V_NOSCALESTART, !cv_allcaps.value);
 		}
 		else
 			V_DrawCharacter(x, y, p[c] | cv_constextsize.value | V_NOSCALESTART, !cv_allcaps.value);
 
 		if (c == input_cur && con_tick >= 4)
-			V_DrawCharacter(x, y + (con_scalefactor*2), '_' | cv_constextsize.value | V_NOSCALESTART, !cv_allcaps.value);
+			V_DrawCharacter(x, y + (con_yscalefactor*2), '_' | cv_constextsize.value | V_NOSCALESTART, !cv_allcaps.value);
 	}
 	if (cend == input_cur && con_tick >= 4)
-		V_DrawCharacter(x, y + (con_scalefactor*2), '_' | cv_constextsize.value | V_NOSCALESTART, !cv_allcaps.value);
+		V_DrawCharacter(x, y + (con_yscalefactor*2), '_' | cv_constextsize.value | V_NOSCALESTART, !cv_allcaps.value);
 	if (rellip)
 	{
 		if (input_sel > cend)
-			V_DrawFill(x, y, charwidth*3, (10 * con_scalefactor), 107 | V_NOSCALESTART);
+			V_DrawFill(x, y, charwidth*3, (10 * con_yscalefactor), 107 | V_NOSCALESTART);
 		for (i = 0; i < 3; ++i, x += charwidth)
 			V_DrawCharacter(x, y, '.' | cv_constextsize.value | V_GRAYMAP | V_NOSCALESTART, !cv_allcaps.value);
 	}
@@ -1511,7 +1517,7 @@ static void CON_DrawHudlines(void)
 	INT32 y;
 	INT32 charflags = 0;
 	INT32 charwidth = 8 * con_scalefactor;
-	INT32 charheight = 8 * con_scalefactor;
+	INT32 charheight = 8 * con_yscalefactor;
 
 	if (con_hudlines <= 0)
 		return;
@@ -1566,8 +1572,8 @@ static void CON_DrawConsole(void)
 	INT32 y;
 	INT32 charflags = 0;
 	INT32 charwidth = (INT32)con_scalefactor << 3;
-	INT32 charheight = charwidth;
-	INT32 minheight = 20 * con_scalefactor;	// 20 = 8+8+4
+	INT32 charheight = (INT32)con_yscalefactor << 3;
+	INT32 minheight = 20 * con_yscalefactor;	// 20 = 8+8+4
 
 	if (con_curlines <= 0)
 		return;

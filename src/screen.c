@@ -79,6 +79,32 @@ static void SCR_ChangeFullscreen (void);
 
 consvar_t cv_fullscreen = {"fullscreen", "Yes", CV_SAVE|CV_CALL, CV_YesNo, SCR_ChangeFullscreen, 0, NULL, NULL, 0, 0, NULL};
 
+static CV_PossibleValue_t framerate_cons_t[] = {{35, "35"}, {50, "50"}, {60, "60"}, {70, "70"}, {90, "90"}, {120, "120"}, {144, "144"}, {240, "240"}, {1000, "Unlimited"}, {24, "Cinematic"}, {0, NULL}};
+consvar_t cv_framerate = {"framerate", "Unlimited", CV_SAVE, framerate_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
+
+static CV_PossibleValue_t lerp_cons_t[] = {{FRACUNIT, "None"}, {FRACUNIT*3/4, "Little"}, {FRACUNIT/2, "Some"}, {FRACUNIT/4, "Most"}, {0, "Full"}, {0, NULL}};
+consvar_t cv_extrapolation = {"extrapolation", "None", CV_SAVE, lerp_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
+
+// Dynamic resolution
+static CV_PossibleValue_t dynamicres_cons_t[] = {{0, "Off"}, {1, "On"}, {2, "Debug"}, {0, NULL}};
+static CV_PossibleValue_t dynamicresorder_cons_t[] = {{0, "X Then Y"}, {1, "Alternating"}, {2, "Square Pixels"}, {0, NULL}};
+static CV_PossibleValue_t dynamicressize_cons_t[] = {{2, "MIN"}, {6, "MAX"}, {0, NULL}};
+static CV_PossibleValue_t dynamicrestime_cons_t[] = {{1, "MIN"}, {30, "MAX"}, {0, NULL}};
+
+consvar_t cv_dynamicres = {"dynres_on", "Off", CV_SAVE, dynamicres_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_dynamicresorder = {"dynres_order", "X Then Y", CV_SAVE, dynamicresorder_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_dynamicminx = {"dynres_minxfactor", "2", CV_SAVE, dynamicressize_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_dynamicminy = {"dynres_minyfactor", "2", CV_SAVE, dynamicressize_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
+
+// These numbers worked for me to maintain >=60FPS.
+consvar_t cv_dynamicdowntime = {"dynres_downscale_rendertime", "12", CV_SAVE, dynamicrestime_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_dynamicdownticsover = {"dynres_downscale_ticsover", "3", CV_SAVE, dynamicrestime_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_dynamicdowntictime = {"dynres_downscale_tictime", "5", CV_SAVE, dynamicrestime_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
+
+consvar_t cv_dynamicuptime = {"dynres_upscale_rendertime", "8", CV_SAVE, dynamicrestime_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_dynamicupticsover = {"dynres_upscale_ticsover", "7", CV_SAVE, dynamicrestime_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_dynamicuptictime = {"dynres_upscale_tictime", "9", CV_SAVE, dynamicrestime_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
+
 // =========================================================================
 //                           SCREEN VARIABLES
 // =========================================================================
@@ -277,9 +303,11 @@ void SCR_Recalc(void)
 
 	// scale 1,2,3 times in x and y the patches for the menus and overlays...
 	// calculated once and for all, used by routines in v_video.c
-	vid.dupx = vid.width / BASEVIDWIDTH;
+	/*vid.dupx = vid.width / BASEVIDWIDTH;
 	vid.dupy = vid.height / BASEVIDHEIGHT;
-	vid.dupx = vid.dupy = (vid.dupx < vid.dupy ? vid.dupx : vid.dupy);
+	vid.dupx = vid.dupy = (vid.dupx < vid.dupy ? vid.dupx : vid.dupy);*/
+	//if (vid.width == 640 && vid.height == 800)
+		//vid.dupy *= vid.yscale;
 	vid.fdupx = FixedDiv(vid.width*FRACUNIT, BASEVIDWIDTH*FRACUNIT);
 	vid.fdupy = FixedDiv(vid.height*FRACUNIT, BASEVIDHEIGHT*FRACUNIT);
 
@@ -399,27 +427,33 @@ boolean SCR_IsAspectCorrect(INT32 width, INT32 height)
 
 // XMOD FPS display
 // moved out of os-specific code for consistency
-static boolean fpsgraph[TICRATE];
-static tic_t lasttic;
+#define FPSRATE 20
+static uint8_t fpsgraph[FPSRATE];
+static tic_t lasttic, totaltics;
 
 void SCR_DisplayTicRate(void)
 {
 	tic_t i;
-	tic_t ontic = I_GetTime();
-	tic_t totaltics = 0;
+	tic_t ontic = I_GetFrameReference(FPSRATE);
 	const UINT8 *ticcntcolor = NULL;
 
-	for (i = lasttic + 1; i < TICRATE+lasttic && i < ontic; ++i)
-		fpsgraph[i % TICRATE] = false;
+	if (lasttic != ontic)
+	{
+		totaltics = 0;
+		for (i = 0;i < FPSRATE;++i)
+			totaltics += fpsgraph[i];
 
-	fpsgraph[ontic % TICRATE] = true;
+		for (i = lasttic + 1; i < FPSRATE+lasttic && i < ontic; ++i)
+			fpsgraph[i] = 0;
 
-	for (i = 0;i < TICRATE;++i)
-		if (fpsgraph[i])
-			++totaltics;
+		fpsgraph[ontic] = 1;
+	}
+	else
+		fpsgraph[ontic]++;
 
 	if (totaltics <= TICRATE/2) ticcntcolor = R_GetTranslationColormap(TC_RAINBOW, SKINCOLOR_SALMON, GTC_CACHE);
-	else if (totaltics == TICRATE) ticcntcolor = R_GetTranslationColormap(TC_RAINBOW, SKINCOLOR_MINT, GTC_CACHE);
+	else if (totaltics >= 59) ticcntcolor = R_GetTranslationColormap(TC_RAINBOW, SKINCOLOR_BUBBLEGUM, GTC_CACHE);
+	else if (totaltics >= TICRATE) ticcntcolor = R_GetTranslationColormap(TC_RAINBOW, SKINCOLOR_MINT, GTC_CACHE);
 
 	/*V_DrawString(vid.width-(24*vid.dupx), vid.height-(16*vid.dupy),
 		V_YELLOWMAP|V_NOSCALESTART, "FPS");

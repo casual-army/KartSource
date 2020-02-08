@@ -1793,7 +1793,7 @@ static void HU_DrawChat_Old(void)
 	const char *ntalk = "Say: ", *ttalk = "Say-Team: ";
 	const char *talk = ntalk;
 	INT32 charwidth = 8 * con_scalefactor; //SHORT(hu_font['A'-HU_FONTSTART]->width) * con_scalefactor;
-	INT32 charheight = 8 * con_scalefactor; //SHORT(hu_font['A'-HU_FONTSTART]->height) * con_scalefactor;
+	INT32 charheight = 8 * con_yscalefactor; //SHORT(hu_font['A'-HU_FONTSTART]->height) * con_scalefactor;
 	if (teamtalk)
 	{
 		talk = ttalk;
@@ -1821,7 +1821,7 @@ static void HU_DrawChat_Old(void)
 	}
 
 	if ((strlen(w_chat) == 0 || c_input == 0) && hu_tick < 4)
-		V_DrawCharacter(HU_INPUTX+c, y+2*con_scalefactor, '_' |cv_constextsize.value | V_NOSCALESTART|t, !cv_allcaps.value);
+		V_DrawCharacter(HU_INPUTX+c, y+2*con_yscalefactor, '_' |cv_constextsize.value | V_NOSCALESTART|t, !cv_allcaps.value);
 
 	i = 0;
 	while (w_chat[i])
@@ -1831,7 +1831,7 @@ static void HU_DrawChat_Old(void)
 		{
 			INT32 cursorx = (HU_INPUTX+c+charwidth < vid.width) ? (HU_INPUTX + c + charwidth) : (HU_INPUTX); // we may have to go down.
 			INT32 cursory = (cursorx != HU_INPUTX) ? (y) : (y+charheight);
-			V_DrawCharacter(cursorx, cursory+2*con_scalefactor, '_' |cv_constextsize.value | V_NOSCALESTART|t, !cv_allcaps.value);
+			V_DrawCharacter(cursorx, cursory+2*con_yscalefactor, '_' |cv_constextsize.value | V_NOSCALESTART|t, !cv_allcaps.value);
 		}
 
 		//Hurdler: isn't it better like that?
@@ -2170,7 +2170,7 @@ void HU_Drawer(void)
 	if (chat_on)
 	{
 		// count down the scroll timer.
-		if (chat_scrolltime > 0)
+		if (chat_scrolltime > 0 && lerp_sameframe)
 			chat_scrolltime--;
 		if (!OLDCHAT)
 			HU_DrawChat();

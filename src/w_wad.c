@@ -206,6 +206,7 @@ static inline void W_LoadDehackedLumpsPK3(UINT16 wadnum)
 			LUA_LoadLump(wadnum, posStart);
 	}
 #endif
+
 	posStart = W_CheckNumForFolderStartPK3("SOC/", wadnum, 0);
 	if (posStart != INT16_MAX)
 	{
@@ -222,7 +223,6 @@ static inline void W_LoadDehackedLumpsPK3(UINT16 wadnum)
 			DEH_LoadDehackedLumpPwad(wadnum, posStart);
 			free(name);
 		}
-
 	}
 }
 
@@ -932,6 +932,16 @@ UINT16 W_InitFile(const char *filename, const char *lumpname, UINT16 *wadnump)
 	// add the wadfile
 	//
 	CONS_Printf(M_GetText("Added file %s (%u lumps)\n"), filename, numlumps);
+	
+	wadfiles[numwadfiles] = wadfile;
+	numwadfiles++; // must come BEFORE W_LoadDehackedLumps, so any addfile called by COM_BufInsertText called by Lua doesn't overwrite what we just loaded
+
+#ifdef HWRENDER
+	if (rendermode == render_opengl)
+		HWR_LoadShaders(numwadfiles - 1, (wadfile->type == RET_PK3));
+#endif
+
+	// TODO: HACK ALERT - Load Lua & SOC stuff right here. I feel like this should be out of this place, but... Let's stick with this for now.
 	if (type == RET_UNKNOWN)
 	{
 		if (wadnump)
@@ -1745,6 +1755,7 @@ void *W_CachePatchName(const char *name, INT32 tag)
 		return W_CachePatchNum(W_GetNumForName("MISSING"), tag);
 	return W_CachePatchNum(num, tag);
 }
+
 #ifndef NOMD5
 
 /**
@@ -1934,11 +1945,14 @@ int W_VerifyNMUSlumps(const char *filename)
 		{"RRINGS", 6}, // Rings HUD (not named as SBO)
 		{"YB_", 3}, // Intermission graphics, goes with the above
 		{"M_", 2}, // As does menu stuff
-
 		{"MKFNT", 5}, // Kart font changes
 		{"K_", 2}, // Kart graphic changes
 		{"MUSICDEF", 8}, // Kart song definitions
 
+#ifdef HWRENDER
+		{"SHADERS", 7},
+		{"SH_", 3},
+#endif
 		{NULL, 0},
 	};
 	return W_VerifyFile(filename, NMUSlist, false);

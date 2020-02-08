@@ -35,6 +35,7 @@ extern INT32 con_destlines;
 extern INT32 con_clearlines; // lines of top of screen to refresh
 extern boolean con_hudupdate; // hud messages have changed, need refresh
 extern UINT32 con_scalefactor; // console text scale factor
+extern UINT32 con_yscalefactor;
 
 extern consvar_t cons_backcolor, cons_menuhighlight;
 

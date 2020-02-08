@@ -372,9 +372,6 @@ static void M_HandleLevelStats(INT32 choice);
 static void M_HandleConnectIP(INT32 choice);
 #endif
 static void M_HandleSetupMultiPlayer(INT32 choice);
-#ifdef HWRENDER
-static void M_HandleFogColor(INT32 choice);
-#endif
 static void M_HandleVideoMode(INT32 choice);
 static void M_HandleMonitorToggles(INT32 choice);
 
@@ -516,6 +513,7 @@ static menuitem_t MISC_ReplayOptionsMenu[] =
 	{IT_CVAR|IT_STRING, NULL, "Sync Check Interval", &cv_netdemosyncquality,     10},
 };
 
+static tic_t playback_last_menu_interaction_leveltime = 0;
 static menuitem_t PlaybackMenu[] =
 {
 	{IT_CALL   | IT_STRING, "M_PHIDE",  "Hide Menu", M_SelectableClearMenus, 0},
@@ -1095,7 +1093,8 @@ static menuitem_t OP_ControlsMenu[] =
 	{IT_CALL | IT_STRING, NULL, "Player 3 Controls...", &M_Setup3PControlsMenu,  30},
 	{IT_CALL | IT_STRING, NULL, "Player 4 Controls...", &M_Setup4PControlsMenu,  40},
 
-	{IT_STRING | IT_CVAR, NULL, "Controls per key", &cv_controlperkey, 60},
+	{IT_STRING | IT_CVAR, NULL, "Controls per key",    &cv_controlperkey, 60},
+	{IT_STRING | IT_CVAR, NULL, "Digital turn easing", &cv_turnsmooth, 70},
 };
 
 static menuitem_t OP_AllControlsMenu[] =
@@ -1230,6 +1229,30 @@ static menuitem_t OP_Mouse2OptionsMenu[] =
 	                      NULL, "Mouse Y Speed",    &cv_mouseysens2,      80},
 };*/
 
+static menuitem_t OP_DynResOptionsMenu[] =
+{
+
+	{IT_STRING | IT_CVAR,	NULL,	"Dynamic Resolution",	&cv_dynamicres,		 10},
+	{IT_STRING | IT_CVAR,	NULL,	"Resize Order",			&cv_dynamicresorder, 20},
+
+	{IT_HEADER, NULL, "Minimum Resolution", NULL, 35},
+	{IT_STRING | IT_CVAR | IT_CV_SLIDER,
+							NULL,	"Horizontal",	&cv_dynamicminx, 45},
+	{IT_STRING | IT_CVAR | IT_CV_SLIDER,
+							NULL,	"Vertical",		&cv_dynamicminy, 55},
+
+	{IT_HEADER, NULL, "Resizing Behavior", NULL, 70},
+	{IT_STRING | IT_CVAR,	NULL,	"Frame Time to Downscale",		&cv_dynamicdowntime,			 80},
+	{IT_STRING | IT_CVAR,	NULL,	"...For This Many Frames",		&cv_dynamicdownticsover,		 90},
+	{IT_STRING | IT_CVAR,	NULL,	"    ...Out of This Many",		&cv_dynamicdowntictime,		 100},
+
+	{IT_STRING | IT_CVAR,	NULL,	"Frame Time to Upscale",		&cv_dynamicuptime,			 115},
+	{IT_STRING | IT_CVAR,	NULL,	"...For This Many Frames",		&cv_dynamicupticsover,		 125},
+	{IT_STRING | IT_CVAR,	NULL,	"    ...Out of This Many",		&cv_dynamicuptictime,		 135},
+};
+
+static menu_t OP_DynResOptionsDef = DEFAULTMENUSTYLE("M_VIDEO", OP_DynResOptionsMenu, &OP_VideoOptionsDef, 30, 30);
+
 static menuitem_t OP_VideoOptionsMenu[] =
 {
 	{IT_STRING | IT_CALL,	NULL,	"Set Resolution...",	M_VideoModeMenu,		 10},
@@ -1244,15 +1267,18 @@ static menuitem_t OP_VideoOptionsMenu[] =
 	{IT_STRING | IT_CVAR,	NULL,	"Weather Draw Distance",&cv_drawdist_precip,	 55},
 	//{IT_STRING | IT_CVAR,	NULL,	"Weather Density",		&cv_precipdensity,		 65},
 	{IT_STRING | IT_CVAR,	NULL,	"Skyboxes",				&cv_skybox,				 65},
-	{IT_STRING | IT_CVAR,	NULL,	"Field of View",		&cv_fov,					75},
+	{IT_STRING | IT_CVAR,	NULL,	"Field of View",		&cv_fov,				 75},
 
 	{IT_STRING | IT_CVAR,	NULL,	"Show FPS",				&cv_ticrate,			 90},
-	{IT_STRING | IT_CVAR,	NULL,	"Vertical Sync",		&cv_vidwait,			100},
+	{IT_STRING | IT_CVAR,	NULL,	"Max Level Framerate",	&cv_framerate,			100},
+	{IT_STRING | IT_CVAR,	NULL,	"Future Sight",			&cv_extrapolation,		110},
+
+	{IT_SUBMENU|IT_STRING,	NULL,	"Dynamic Res Options...", &OP_DynResOptionsDef, 125},
 
 #ifdef HWRENDER
-	{IT_STRING | IT_CVAR,	NULL,	"3D models",            &cv_grmdls,              115},
-	{IT_STRING | IT_CVAR,	NULL,	"Fallback Player 3D Model",	&cv_grfallbackplayermodel,	125},
-	{IT_SUBMENU|IT_STRING,	NULL,	"OpenGL Options...",	&OP_OpenGLOptionsDef,   135},
+	{IT_STRING | IT_CVAR,	NULL,	"3D models",            &cv_grmdls,              125},
+	{IT_STRING | IT_CVAR,	NULL,	"Fallback Player 3D Model",	&cv_grfallbackplayermodel,	135},
+	{IT_SUBMENU|IT_STRING,	NULL,	"OpenGL Options...",	&OP_OpenGLOptionsDef,   145},
 #endif
 };
 
@@ -1269,7 +1295,9 @@ enum
 	op_video_skybox,
 	op_video_fov,
 	op_video_fps,
+	op_video_frameratecap,
 	op_video_vsync,
+	op_video_dynres,
 #ifdef HWRENDER
 	op_video_md2,
 	op_video_kartman,
@@ -1285,36 +1313,24 @@ static menuitem_t OP_VideoModeMenu[] =
 #ifdef HWRENDER
 static menuitem_t OP_OpenGLOptionsMenu[] =
 {
-	{IT_SUBMENU|IT_STRING,      NULL, "Fog...",          &OP_OpenGLFogDef,      10},
-	{IT_SUBMENU|IT_STRING,      NULL, "Gamma...",        &OP_OpenGLColorDef,    20},
+	{IT_STRING|IT_CVAR,         NULL, "Shaders",                    &cv_grshaders,         10},
+	{IT_STRING|IT_CVAR,         NULL, "Software Perspective",       &cv_grshearing,        20},
+	{IT_STRING|IT_CVAR,         NULL, "Sprite Billboarding",      	&cv_grspritebillboarding,30},
 
-	{IT_STRING|IT_CVAR,         NULL, "Quality",         &cv_scr_depth,         35},
-	{IT_STRING|IT_CVAR,         NULL, "Texture Filter",  &cv_grfiltermode,      45},
-	{IT_STRING|IT_CVAR,         NULL, "Anisotropic",     &cv_granisotropicmode, 55},
-/*#ifdef _WINDOWS
-	{IT_STRING|IT_CVAR,         NULL, "Fullscreen",      &cv_fullscreen,       50},
+	{IT_STRING|IT_CVAR,         NULL, "Quality",                    &cv_scr_depth,         50},
+	{IT_STRING|IT_CVAR,         NULL, "Texture Filter",             &cv_grfiltermode,      60},
+	{IT_STRING|IT_CVAR,         NULL, "Anisotropic",                &cv_granisotropicmode, 70},
+#ifdef _WINDOWS
+	{IT_STRING|IT_CVAR,         NULL, "Fullscreen",                 &cv_fullscreen,        80},
 #endif
-#ifdef ALAM_LIGHTING
-	{IT_SUBMENU|IT_STRING,      NULL, "Lighting...",     &OP_OpenGLLightingDef,     70},
-#endif*/
+	{IT_SUBMENU|IT_STRING,      NULL, "Fog...",                     &OP_OpenGLFogDef,      100},
+	{IT_SUBMENU|IT_STRING,      NULL, "Gamma...",                   &OP_OpenGLColorDef,    110},
 };
-
-#ifdef ALAM_LIGHTING
-static menuitem_t OP_OpenGLLightingMenu[] =
-{
-	{IT_STRING|IT_CVAR, NULL, "Coronas",          &cv_grcoronas,          0},
-	{IT_STRING|IT_CVAR, NULL, "Coronas size",     &cv_grcoronasize,      10},
-	{IT_STRING|IT_CVAR, NULL, "Dynamic lighting", &cv_grdynamiclighting, 20},
-	{IT_STRING|IT_CVAR, NULL, "Static lighting",  &cv_grstaticlighting,  30},
-};
-#endif
 
 static menuitem_t OP_OpenGLFogMenu[] =
 {
 	{IT_STRING|IT_CVAR,       NULL, "Fog",         &cv_grfog,        10},
-	{IT_STRING|IT_KEYHANDLER, NULL, "Fog Color",   M_HandleFogColor, 20},
-	{IT_STRING|IT_CVAR,       NULL, "Fog Density", &cv_grfogdensity, 30},
-	{IT_STRING|IT_CVAR,       NULL, "Software Fog",&cv_grsoftwarefog,40},
+	{IT_STRING|IT_CVAR,       NULL, "Fog density", &cv_grfogdensity, 20},
 };
 
 static menuitem_t OP_OpenGLColorMenu[] =
@@ -2081,9 +2097,6 @@ menu_t OP_MonitorToggleDef =
 
 #ifdef HWRENDER
 menu_t OP_OpenGLOptionsDef = DEFAULTMENUSTYLE("M_VIDEO", OP_OpenGLOptionsMenu, &OP_VideoOptionsDef, 30, 30);
-#ifdef ALAM_LIGHTING
-menu_t OP_OpenGLLightingDef = DEFAULTMENUSTYLE("M_VIDEO", OP_OpenGLLightingMenu, &OP_OpenGLOptionsDef, 60, 40);
-#endif
 menu_t OP_OpenGLFogDef =
 {
 	"M_VIDEO",
@@ -2788,6 +2801,7 @@ boolean M_Responder(event_t *ev)
 
 	if (currentMenu == &PlaybackMenuDef)
 	{
+		playback_last_menu_interaction_leveltime = leveltime;
 		// Flip left/right with up/down for the playback menu, since it's a horizontal icon row.
 		switch (ch)
 		{
@@ -2849,9 +2863,9 @@ boolean M_Responder(event_t *ev)
 			if (currentMenu == &PlaybackMenuDef)
 			{
 				boolean held = (boolean)playback_enterheld;
-				playback_enterheld = TICRATE/7;
 				if (held)
 					return true;
+				playback_enterheld = 3;
 			}
 
 			if (routine)
@@ -3024,6 +3038,7 @@ void M_StartControlPanel(void)
 	if (demo.playback)
 	{
 		currentMenu = &PlaybackMenuDef;
+		playback_last_menu_interaction_leveltime = leveltime;
 	}
 	else if (!Playing())
 	{
@@ -3342,6 +3357,8 @@ void M_Init(void)
 		OP_VideoOptionsMenu[op_video_ogl].status =
 			OP_VideoOptionsMenu[op_video_kartman].status =
 			OP_VideoOptionsMenu[op_video_md2]    .status = IT_DISABLED;
+	else
+		OP_VideoOptionsMenu[op_video_dynres].status = IT_DISABLED;
 #endif
 
 #ifndef NONET
@@ -4506,21 +4523,11 @@ static void M_StopMessage(INT32 choice)
 // You can even put multiple images in one menu!
 static void M_DrawImageDef(void)
 {
-	// this is probably what the V_DrawFixedPatch screen-fill bullshit was for, right
-	//V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, 31); -- never mind, screen fade
-
-	// Grr.  Need to autodetect for pic_ts.
-	pic_t *pictest = (pic_t *)W_CachePatchName(currentMenu->menuitems[itemOn].text,PU_CACHE);
-	if (!pictest->zero)
-		V_DrawScaledPic(0,0,0,W_GetNumForName(currentMenu->menuitems[itemOn].text));
+	patch_t *patch = W_CachePatchName(currentMenu->menuitems[itemOn].text,PU_CACHE);
+	if (patch->width <= BASEVIDWIDTH)
+		V_DrawScaledPatch(0,0,0,patch);
 	else
-	{
-		patch_t *patch = W_CachePatchName(currentMenu->menuitems[itemOn].text,PU_CACHE);
-		if (patch->height <= BASEVIDHEIGHT)
-			V_DrawScaledPatch(0,0,0,patch);
-		else
-			V_DrawSmallScaledPatch(0,0,0,patch);
-	}
+		V_DrawSmallScaledPatch(0,0,0,patch);
 
 	if (currentMenu->menuitems[itemOn].alphaKey)
 	{
@@ -5196,6 +5203,7 @@ void M_ReplayHut(INT32 choice)
 	G_SetGamestate(GS_TIMEATTACK);
 
 	demo.rewinding = false;
+	CL_ClearRewinds();
 
 	S_ChangeMusicInternal("replst", true);
 }
@@ -5208,7 +5216,8 @@ static void M_HandleReplayHutList(INT32 choice)
 		if (dir_on[menudepthleft])
 			dir_on[menudepthleft]--;
 		else
-			M_PrevOpt();
+			return;
+			//M_PrevOpt();
 
 		S_StartSound(NULL, sfx_menu1);
 		replayScrollTitle = 0; replayScrollDelay = TICRATE; replayScrollDir = 1;
@@ -5218,7 +5227,8 @@ static void M_HandleReplayHutList(INT32 choice)
 		if (dir_on[menudepthleft] < sizedirmenu-1)
 			dir_on[menudepthleft]++;
 		else
-			itemOn = 0; // Not M_NextOpt because that would take us to the extra dummy item
+			return;
+			//itemOn = 0; // Not M_NextOpt because that would take us to the extra dummy item
 
 		S_StartSound(NULL, sfx_menu1);
 		replayScrollTitle = 0; replayScrollDelay = TICRATE; replayScrollDir = 1;
@@ -5725,6 +5735,11 @@ static void M_DrawPlaybackMenu(void)
 	INT16 i;
 	patch_t *icon;
 	UINT8 *activemap = R_GetTranslationColormap(TC_RAINBOW, SKINCOLOR_GOLD, GTC_MENUCACHE);
+	UINT32 transmap = max(0, (INT32)(leveltime - playback_last_menu_interaction_leveltime - 4*TICRATE)) / 5;
+	transmap = min(8, transmap) << V_ALPHASHIFT;
+
+	if (leveltime - playback_last_menu_interaction_leveltime >= 6*TICRATE)
+		playback_last_menu_interaction_leveltime = leveltime - 6*TICRATE;
 
 	// Toggle items
 	if (paused && !demo.rewinding)
@@ -5806,16 +5821,16 @@ static void M_DrawPlaybackMenu(void)
 			icon = W_CachePatchName("PLAYRANK", PU_CACHE); // temp
 
 		if ((i == playback_fastforward && cv_playbackspeed.value > 1) || (i == playback_rewind && demo.rewinding))
-			V_DrawMappedPatch(currentMenu->x + currentMenu->menuitems[i].alphaKey, currentMenu->y, V_SNAPTOTOP, icon, R_GetTranslationColormap(TC_RAINBOW, SKINCOLOR_JAWZ, GTC_MENUCACHE));
+			V_DrawMappedPatch(currentMenu->x + currentMenu->menuitems[i].alphaKey, currentMenu->y, transmap|V_SNAPTOTOP, icon, R_GetTranslationColormap(TC_RAINBOW, SKINCOLOR_JAWZ, GTC_MENUCACHE));
 		else
-			V_DrawMappedPatch(currentMenu->x + currentMenu->menuitems[i].alphaKey, currentMenu->y, V_SNAPTOTOP, icon, (i == itemOn) ? activemap : inactivemap);
+			V_DrawMappedPatch(currentMenu->x + currentMenu->menuitems[i].alphaKey, currentMenu->y, transmap|V_SNAPTOTOP, icon, (i == itemOn) ? activemap : inactivemap);
 
 		if (i == itemOn)
 		{
 			V_DrawCharacter(currentMenu->x + currentMenu->menuitems[i].alphaKey + 4, currentMenu->y + 14,
-				'\x1A' | V_SNAPTOTOP|highlightflags, false);
+				'\x1A' | transmap|V_SNAPTOTOP|highlightflags, false);
 
-			V_DrawCenteredString(BASEVIDWIDTH/2, currentMenu->y + 18, V_SNAPTOTOP|V_ALLOWLOWERCASE, currentMenu->menuitems[i].text);
+			V_DrawCenteredString(BASEVIDWIDTH/2, currentMenu->y + 18, transmap|V_SNAPTOTOP|V_ALLOWLOWERCASE, currentMenu->menuitems[i].text);
 
 			if ((currentMenu->menuitems[i].status & IT_TYPE) == IT_ARROWS)
 			{
@@ -5823,11 +5838,11 @@ static void M_DrawPlaybackMenu(void)
 
 				if (!(i == playback_viewcount && splitscreen == 3))
 					V_DrawCharacter(BASEVIDWIDTH/2 - 4, currentMenu->y + 28 - (skullAnimCounter/5),
-						'\x1A' | V_SNAPTOTOP|highlightflags, false); // up arrow
+						'\x1A' | transmap|V_SNAPTOTOP|highlightflags, false); // up arrow
 
 				if (!(i == playback_viewcount && splitscreen == 0))
 					V_DrawCharacter(BASEVIDWIDTH/2 - 4, currentMenu->y + 48 + (skullAnimCounter/5),
-						'\x1B' | V_SNAPTOTOP|highlightflags, false); // down arrow
+						'\x1B' | transmap|V_SNAPTOTOP|highlightflags, false); // down arrow
 
 				switch (i)
 				{
@@ -5846,7 +5861,7 @@ static void M_DrawPlaybackMenu(void)
 					continue;
 				}
 
-				V_DrawCenteredString(BASEVIDWIDTH/2, currentMenu->y + 38, V_SNAPTOTOP|V_ALLOWLOWERCASE|highlightflags, str);
+				V_DrawCenteredString(BASEVIDWIDTH/2, currentMenu->y + 38, transmap|V_SNAPTOTOP|V_ALLOWLOWERCASE|highlightflags, str);
 			}
 		}
 	}
@@ -10995,7 +11010,7 @@ static void M_QuitSRB2(INT32 choice)
 // OpenGL specific options
 // =====================================================================
 
-#define FOG_COLOR_ITEM  1
+#define FOG_DENSITY_ITEM  1
 // ===================
 // M_OGL_DrawFogMenu()
 // ===================
@@ -11006,12 +11021,8 @@ static void M_OGL_DrawFogMenu(void)
 	mx = currentMenu->x;
 	my = currentMenu->y;
 	M_DrawGenericMenu(); // use generic drawer for cursor, items and title
-	V_DrawString(BASEVIDWIDTH - mx - V_StringWidth(cv_grfogcolor.string, 0),
-		my + currentMenu->menuitems[FOG_COLOR_ITEM].alphaKey, highlightflags, cv_grfogcolor.string);
-	// blink cursor on FOG_COLOR_ITEM if selected
-	if (itemOn == FOG_COLOR_ITEM && skullAnimCounter < 4)
-		V_DrawCharacter(BASEVIDWIDTH - mx,
-			my + currentMenu->menuitems[FOG_COLOR_ITEM].alphaKey, '_' | 0x80,false);
+	V_DrawString(BASEVIDWIDTH - mx - V_StringWidth(cv_grfogdensity.string, 0),
+		my + currentMenu->menuitems[FOG_DENSITY_ITEM].alphaKey, V_YELLOWMAP, cv_grfogdensity.string);
 }
 
 // =====================
@@ -11026,62 +11037,5 @@ static void M_OGL_DrawColorMenu(void)
 	M_DrawGenericMenu(); // use generic drawer for cursor, items and title
 	V_DrawString(mx, my + currentMenu->menuitems[0].alphaKey - 10,
 		highlightflags, "Gamma correction");
-}
-
-//===================
-// M_HandleFogColor()
-//===================
-static void M_HandleFogColor(INT32 choice)
-{
-	size_t i, l;
-	char temp[8];
-	boolean exitmenu = false; // exit to previous menu and send name change
-
-	switch (choice)
-	{
-		case KEY_DOWNARROW:
-			S_StartSound(NULL, sfx_menu1);
-			itemOn++;
-			break;
-
-		case KEY_UPARROW:
-			S_StartSound(NULL, sfx_menu1);
-			itemOn--;
-			break;
-
-		case KEY_ESCAPE:
-			exitmenu = true;
-			break;
-
-		case KEY_BACKSPACE:
-			S_StartSound(NULL, sfx_menu1);
-			strcpy(temp, cv_grfogcolor.string);
-			strcpy(cv_grfogcolor.zstring, "000000");
-			l = strlen(temp)-1;
-			for (i = 0; i < l; i++)
-				cv_grfogcolor.zstring[i + 6 - l] = temp[i];
-			break;
-
-		default:
-			if ((choice >= '0' && choice <= '9') || (choice >= 'a' && choice <= 'f')
-				|| (choice >= 'A' && choice <= 'F'))
-			{
-				S_StartSound(NULL, sfx_menu1);
-				strcpy(temp, cv_grfogcolor.string);
-				strcpy(cv_grfogcolor.zstring, "000000");
-				l = strlen(temp);
-				for (i = 0; i < l; i++)
-					cv_grfogcolor.zstring[5 - i] = temp[l - i];
-				cv_grfogcolor.zstring[5] = (char)choice;
-			}
-			break;
-	}
-	if (exitmenu)
-	{
-		if (currentMenu->prevMenu)
-			M_SetupNextMenu(currentMenu->prevMenu);
-		else
-			M_ClearMenus(true);
-	}
 }
 #endif

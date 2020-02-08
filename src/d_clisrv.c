@@ -5548,7 +5548,7 @@ void TryRunTics(tic_t realtics)
 
 	if (demo.playback)
 	{
-		neededtic = gametic + realtics * (gamestate == GS_LEVEL ? cv_playbackspeed.value : 1);
+		neededtic = gametic + realtics;// * (gamestate == GS_LEVEL ? cv_playbackspeed.value : 1);
 		// start a game after a demo
 		maketic += realtics;
 		firstticstosend = maketic;
@@ -5870,4 +5870,60 @@ INT32 D_NumPlayers(void)
 tic_t GetLag(INT32 node)
 {
 	return gametic - nettics[node];
+}
+
+#define REWIND_POINT_INTERVAL 4*TICRATE + 16
+rewind_t *rewindhead;
+
+void CL_ClearRewinds(void)
+{
+	rewind_t *head;
+	while ((head = rewindhead))
+	{
+		rewindhead = rewindhead->next;
+		free(head);
+	}
+}
+
+rewind_t *CL_SaveRewindPoint(size_t demopos)
+{
+	rewind_t *rewind;
+
+	if (rewindhead && rewindhead->leveltime + REWIND_POINT_INTERVAL > leveltime)
+		return NULL;
+
+	rewind = (rewind_t *)malloc(sizeof (rewind_t));
+	if (!rewind)
+		return NULL;
+
+	save_p = rewind->savebuffer;
+	P_SaveNetGame();
+	rewind->leveltime = leveltime;
+	rewind->next = rewindhead;
+	rewind->demopos = demopos;
+	rewindhead = rewind;
+
+	return rewind;
+}
+
+rewind_t *CL_RewindToTime(tic_t time)
+{
+	rewind_t *rewind;
+
+	while (rewindhead && rewindhead->leveltime > time)
+	{
+		rewind = rewindhead->next;
+		free(rewindhead);
+		rewindhead = rewind;
+	}
+
+	if (!rewindhead)
+		return NULL;
+
+	save_p = rewindhead->savebuffer;
+	P_LoadNetGame();
+	wipegamestate = gamestate; // No fading back in!
+	timeinmap = leveltime;
+
+	return rewindhead;
 }
