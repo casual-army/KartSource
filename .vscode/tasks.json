@@ -1,0 +1,46 @@
+{
+    // See https://go.microsoft.com/fwlink/?LinkId=733558 
+    // for the documentation about the tasks.json format
+    "version": "2.0.0",
+    "options": {
+        "env": {
+            "CC": "gcc"
+        },
+        "cwd": "${workspaceFolder}/src"
+    },
+    "tasks": [
+        {
+            "type": "shell",
+            "label": "clean objs",
+            "command": "powershell -c del ../objs/Mingw/SDL/Release/* -exclude .gitignore"
+        },
+        {
+            // https://wiki.srb2.org/wiki/Source_code_compiling/Makefiles
+            "type": "shell",
+            "label": "make build srb2kart",
+            "command": "mingw32-make",
+            "args": [
+                "MINGW=1",
+                "WINDOWSHELL=1",
+                "SDL=1",
+                "NOOBJDUMP=1",
+                "JOININGAME=0"
+            ],
+            "problemMatcher": [
+                "$gcc"
+            ]
+        },
+        {
+            "label": "Build",
+            "dependsOrder": "sequence",
+            "dependsOn": [
+                "clean objs",
+                "make build srb2kart"
+            ],
+            "group": "build",
+            "problemMatcher": [
+                "$gcc"
+            ]
+        }
+    ]
+}
