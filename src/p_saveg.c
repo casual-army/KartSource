@@ -3214,10 +3214,10 @@ static void P_NetArchiveMisc(void)
 	WRITEUINT32(save_p, ARCHIVEBLOCK_MISC);
 
 	WRITEINT16(save_p, gamemap);
-	if (gamestate != GS_LEVEL)
+	//if (gamestate != GS_LEVEL)
 		WRITEINT16(save_p, GS_WAITINGPLAYERS); // nice hack to put people back into waitingplayers
-	else
-		WRITEINT16(save_p, gamestate);
+	//else
+	//	WRITEINT16(save_p, gamestate);
 
 	for (i = 0; i < MAXPLAYERS; i++)
 		pig |= (playeringame[i] != 0)<<i;
@@ -3426,6 +3426,7 @@ void P_SaveNetGame(void)
 	CV_SaveNetVars(&save_p, false);
 	P_NetArchiveMisc();
 
+/*
 	// Assign the mobjnumber for pointer tracking
 	if (gamestate == GS_LEVEL)
 	{
@@ -3440,8 +3441,10 @@ void P_SaveNetGame(void)
 			}
 		}
 	}
-
+*/
 	P_NetArchivePlayers();
+
+/*
 	if (gamestate == GS_LEVEL)
 	{
 		P_NetArchiveWorld();
@@ -3451,6 +3454,8 @@ void P_SaveNetGame(void)
 		P_NetArchiveThinkers();
 		P_NetArchiveSpecials();
 	}
+*/
+
 #ifdef HAVE_BLUA
 	LUA_Archive();
 #endif
