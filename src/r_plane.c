@@ -296,8 +296,16 @@ void R_MapPlane(INT32 y, INT32 x1, INT32 x2)
 		ds_ystep = cachedystep[y];
 	}
 
+	//if (vid.width == 640 && vid.height == 800)
+	{
+		ds_xstep *= vid.yscale;
+		ds_ystep *= vid.yscale;
+		distance *= vid.yscale;
+	}
+
 	ds_xfrac = xoffs + FixedMul(planecos, distance) + (x1 - centerx) * ds_xstep;
 	ds_yfrac = yoffs - FixedMul(planesin, distance) + (x1 - centerx) * ds_ystep;
+
 
 #ifndef NOWATER
 	if (itswater)
@@ -709,9 +717,6 @@ void R_DrawPlanes(void)
 					continue;
 				}
 
-				// use correct aspect ratio scale
-				dc_iscale = skyscale;
-
 				// Sky is always drawn full bright,
 				//  i.e. colormaps[0] is used.
 				// Because of this hack, sky is not affected
@@ -1099,6 +1104,12 @@ void R_DrawSinglePlane(visplane_t *pl)
 		ds_sv.z *= focallengthf;
 		ds_sz.z *= focallengthf;
 
+		//if (vid.width == 640 && vid.height == 800)
+		{
+			ds_su.y /= vid.yscale;
+			ds_sv.y /= vid.yscale;
+			ds_sz.y /= vid.yscale;
+		}
 		// Premultiply the texture vectors with the scale factors
 #define SFMULT 65536.f*(1<<nflatshiftup)
 		ds_su.x *= SFMULT;

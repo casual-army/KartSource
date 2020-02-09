@@ -944,6 +944,7 @@ void D_RegisterClientCommands(void)
 	CV_RegisterVar(&cv_mouse2opt);
 #endif
 	CV_RegisterVar(&cv_controlperkey);
+	CV_RegisterVar(&cv_turnsmooth);
 
 	CV_RegisterVar(&cv_usemouse);
 	CV_RegisterVar(&cv_usemouse2);
@@ -996,9 +997,22 @@ void D_RegisterClientCommands(void)
 	CV_RegisterVar(&cv_renderview);
 	CV_RegisterVar(&cv_vhseffect);
 	CV_RegisterVar(&cv_shittyscreen);
+	CV_RegisterVar(&cv_framerate);
+	CV_RegisterVar(&cv_extrapolation);
 	CV_RegisterVar(&cv_scr_depth);
 	CV_RegisterVar(&cv_scr_width);
 	CV_RegisterVar(&cv_scr_height);
+
+	CV_RegisterVar(&cv_dynamicres);
+	CV_RegisterVar(&cv_dynamicresorder);
+	CV_RegisterVar(&cv_dynamicminx);
+	CV_RegisterVar(&cv_dynamicminy);
+	CV_RegisterVar(&cv_dynamicdowntime);
+	CV_RegisterVar(&cv_dynamicdownticsover);
+	CV_RegisterVar(&cv_dynamicdowntictime);
+	CV_RegisterVar(&cv_dynamicuptime);
+	CV_RegisterVar(&cv_dynamicupticsover);
+	CV_RegisterVar(&cv_dynamicuptictime);
 
 	CV_RegisterVar(&cv_soundtest);
 

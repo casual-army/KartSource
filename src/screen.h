@@ -80,6 +80,10 @@ typedef struct viddef_s
 
 	INT32 baseratio; // Used to get the correct value for lighting walls
 
+	INT32 pickedwidth, pickedheight; // Actual chosen video size, for dynamic res
+	INT32 pickeddup; // dupx/dupy of picked size
+	float yscale; // Y scale of resolution when distorted by dynamic res
+
 	// for Win32 version
 	DNWH WndParent; // handle of the application's window
 	UINT8 smalldupx, smalldupy; // factor for a little bit of scaling
@@ -159,6 +163,11 @@ extern INT32 scr_bpp;
 extern UINT8 *scr_borderpatch; // patch used to fill the view borders
 
 extern consvar_t cv_scr_width, cv_scr_height, cv_scr_depth, cv_renderview, cv_fullscreen, cv_vhseffect, cv_shittyscreen;
+extern consvar_t cv_framerate, cv_extrapolation;
+
+extern consvar_t cv_dynamicres, cv_dynamicresorder, cv_dynamicminx, cv_dynamicminy,
+	cv_dynamicdowntime, cv_dynamicdownticsover, cv_dynamicdowntictime,
+	cv_dynamicuptime, cv_dynamicupticsover, cv_dynamicuptictime;
 // wait for page flipping to end or not
 extern consvar_t cv_vidwait;
 

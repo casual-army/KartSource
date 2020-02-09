@@ -1308,7 +1308,11 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 	static boolean keyboard_look[MAXSPLITSCREENPLAYERS]; // true if lookup/down using keyboard
 	static boolean resetdown[MAXSPLITSCREENPLAYERS]; // don't cam reset every frame
 
-	if (demo.playback) return;
+	if (demo.playback)
+	{
+		camspin[ssplayer-1] = InputDown(gc_lookback, ssplayer);
+		return;
+	}
 
 	if (ssplayer == 1)
 		player = &players[consoleplayer];
@@ -1414,7 +1418,7 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 		th = 0;
 
 	if (th < SLOWTURNTICS)
-		tspeed = 2; // slow turn
+		tspeed = cv_turnsmooth.value == 2 ? 2 : 0; // slow turn
 	else
 		tspeed = speed;
 
@@ -1476,7 +1480,7 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 		{
 			cmd->buttons |= BT_ACCELERATE;
 			// JOYAXISRANGE is supposed to be 1023 (divide by 1024)
-			forward += ((axis * forwardmove[1]) >> 10)*2;
+			forward += (((axis+1) * forwardmove[1]) >> 10);
 		}
 
 		axis = JoyAxis(AXISBRAKE, ssplayer);
@@ -1491,7 +1495,7 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 			cmd->buttons |= BT_BRAKE;
 			// JOYAXISRANGE is supposed to be 1023 (divide by 1024)
 			if (cmd->buttons & BT_ACCELERATE || cmd->forwardmove <= 0)
-				forward -= ((axis * forwardmove[0]) >> 10);
+				forward -= (((axis+1) * forwardmove[0]) >> 10);
 		}
 
 		// But forward/backward IS used for aiming.
@@ -1964,6 +1968,22 @@ boolean G_Responder(event_t *ev)
 			G_AdjustView(4, 1, true);
 
 			return true;
+		}
+
+		// Allow looking back during replays
+		if (
+			ev->data1 == gamecontrol[gc_lookback][0] ||
+			ev->data1 == gamecontrol[gc_lookback][1] ||
+			ev->data1 == gamecontrolbis[gc_lookback][0] ||
+			ev->data1 == gamecontrolbis[gc_lookback][1] ||
+			ev->data1 == gamecontrol3[gc_lookback][0] ||
+			ev->data1 == gamecontrol3[gc_lookback][1] ||
+			ev->data1 == gamecontrol4[gc_lookback][0] ||
+			ev->data1 == gamecontrol4[gc_lookback][1]
+		)
+		{
+			G_MapEventsToControls(ev);
+			return false;
 		}
 
 		// Allow pausing
@@ -5116,6 +5136,16 @@ void G_ReadDemoExtraData(void)
 	INT32 p, extradata, i;
 	char name[17];
 
+	if (leveltime > starttime)
+	{
+		rewind_t *rewind = CL_SaveRewindPoint(demo_p - demobuffer);
+		if (rewind)
+		{
+			memcpy(rewind->oldcmd, oldcmd, sizeof (oldcmd));
+			memcpy(rewind->oldghost, oldghost, sizeof (oldghost));
+		}
+	}
+
 	memset(name, '\0', 17);
 
 	p = READUINT8(demo_p);
@@ -6154,6 +6184,8 @@ static rewindinfo_t *rewindhead = NULL; // Reverse chronological order
 
 void G_InitDemoRewind(void)
 {
+	CL_ClearRewinds();
+
 	while (rewindhead)
 	{
 		rewindinfo_t *p = rewindhead->prev;
@@ -6275,19 +6307,35 @@ void G_ConfirmRewind(tic_t rewindtime)
 
 	CV_StealthSetValue(&cv_renderview, 0);
 
-	if (rewindtime > starttime)
+	if (rewindtime <= starttime)
 	{
-		sound_disabled = true; // Prevent sound spam
-		demo.rewinding = true;
+		demo.rewinding = false;
+		G_DoPlayDemo(NULL); // Restart the current demo
 	}
 	else
-		demo.rewinding = false;
+	{
+		rewind_t *rewind;
+		sound_disabled = true; // Prevent sound spam
+		demo.rewinding = true;
 
-	G_DoPlayDemo(NULL); // Restart the current demo
+		rewind = CL_RewindToTime(rewindtime);
+
+		if (rewind)
+		{
+			demo_p = demobuffer + rewind->demopos;
+			memcpy(oldcmd, rewind->oldcmd, sizeof (oldcmd));
+			memcpy(oldghost, rewind->oldghost, sizeof (oldghost));
+			paused = false;
+		}
+		else
+		{
+			demo.rewinding = true;
+			G_DoPlayDemo(NULL); // Restart the current demo
+		}
+	}
 
 	for (j = 0; j < rewindtime && leveltime < rewindtime; j++)
 	{
-		//TryRunTics(1);
 		G_Ticker((j % NEWTICRATERATIO) == 0);
 	}
 
@@ -8346,6 +8394,7 @@ void G_StopDemo(void)
 
 	CV_SetValue(&cv_playbackspeed, 1);
 	demo.rewinding = false;
+	CL_ClearRewinds();
 
 	if (gamestate == GS_LEVEL && rendermode != render_none)
 	{

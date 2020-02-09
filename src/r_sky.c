@@ -83,5 +83,7 @@ void R_SetSkyScale(void)
 	fixed_t scr = FRACUNIT;
 	if (splitscreen > 1)
 		scr *= 2;
+	//if (vid.width == 640 && vid.height == 800)
+		scr /= vid.yscale;
 	skyscale = FixedDiv(scr, vid.fdupx+difference);
 }

@@ -52,6 +52,9 @@ typedef LPVOID (WINAPI *p_MapViewOfFile) (HANDLE, DWORD, DWORD, DWORD, SIZE_T);
 #endif
 #if defined (__unix__) || defined (UNIXCOMMON)
 #include <fcntl.h>
+#ifndef __MACH__
+#include <time.h>
+#endif/*__MACH__*/
 #endif
 
 #include <stdio.h>
@@ -2916,9 +2919,9 @@ static p_timeGetTime pfntimeGetTime = NULL;
 // but lower precision on Windows NT
 // ---------
 
-tic_t I_GetTime(void)
+static DWORD TimeMillis(void)
 {
-	tic_t newtics = 0;
+	DWORD newtics = 0;
 
 	if (!starttickcount) // high precision timer
 	{
@@ -2938,7 +2941,7 @@ tic_t I_GetTime(void)
 
 		if (frequency.LowPart && QueryPerformanceCounter(&currtime))
 		{
-			newtics = (INT32)((currtime.QuadPart - basetime.QuadPart) * NEWTICRATE
+			newtics = (INT32)((currtime.QuadPart - basetime.QuadPart) * 1000
 				/ frequency.QuadPart);
 		}
 		else if (pfntimeGetTime)
@@ -2946,13 +2949,18 @@ tic_t I_GetTime(void)
 			currtime.LowPart = pfntimeGetTime();
 			if (!basetime.LowPart)
 				basetime.LowPart = currtime.LowPart;
-			newtics = ((currtime.LowPart - basetime.LowPart)/(1000/NEWTICRATE));
+			newtics = ((currtime.LowPart - basetime.LowPart));
 		}
 	}
 	else
-		newtics = (GetTickCount() - starttickcount)/(1000/NEWTICRATE);
+		newtics = (GetTickCount() - starttickcount);
 
 	return newtics;
+}
+
+tic_t I_GetTime(void)
+{
+	return TimeMillis() / (1000/NEWTICRATE);
 }
 
 static void I_ShutdownTimer(void)
@@ -2968,6 +2976,25 @@ static void I_ShutdownTimer(void)
 	}
 }
 #else
+#ifndef __MACH__
+struct timespec clk_basetime;
+
+static int TimeMillis(void)
+{
+	struct timespec ts;
+	int ms;
+
+	/* clock_gettime won't fail if its arguments are correct */
+	clock_gettime(CLOCK_MONOTONIC, &ts);
+
+	/* nanoseconds to milliseconds */
+	ms  = ( ts.tv_nsec - clk_basetime.tv_nsec )/ 1000000;
+	ms +=   ts.tv_sec  * 1000;
+
+	return ms;
+}
+#endif/*__MACH__*/
+
 //
 // I_GetTime
 // returns time in 1/TICRATE second tics
@@ -2990,6 +3017,18 @@ tic_t I_GetTime (void)
 }
 #endif
 
+#ifndef __MACH__
+fixed_t I_GetFracTime(void)
+{
+	return TimeMillis() % (1000/NEWTICRATE) * (FRACUNIT / NEWTICRATE);
+}
+
+UINT16 I_GetFrameReference(UINT16 fps)
+{
+	return (TimeMillis() % 1000) * fps / 1000;
+}
+#endif/*__MACH__*/
+
 //
 //I_StartupTimer
 //
@@ -3011,6 +3050,8 @@ void I_StartupTimer(void)
 		pfntimeGetTime = (p_timeGetTime)GetProcAddress(winmm, "timeGetTime");
 	}
 	I_AddExitFunc(I_ShutdownTimer);
+#else
+	clock_gettime(CLOCK_MONOTONIC, &clk_basetime);
 #endif
 }
 

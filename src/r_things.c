@@ -13,6 +13,7 @@
 
 #include "doomdef.h"
 #include "console.h"
+#include "d_main.h" // lerp_fractic
 #include "g_game.h"
 #include "r_local.h"
 #include "st_stuff.h"
@@ -259,6 +260,7 @@ static boolean R_AddSingleSpriteDef(const char *sprname, spritedef_t *spritedef,
 			//BP: we cannot use special tric in hardware mode because feet in ground caused by z-buffer
 			if (rendermode != render_none) // not for psprite
 				spritecachedinfo[numspritelumps].topoffset += 4<<FRACBITS;
+
 			// Being selective with this causes bad things. :( Like the special stage tokens breaking apart.
 			/*if (rendermode != render_none // not for psprite
 			 && SHORT(patch.topoffset)>0 && SHORT(patch.topoffset)<SHORT(patch.height))
@@ -1161,11 +1163,13 @@ static void R_ProjectSprite(mobj_t *thing)
 	INT32 light = 0;
 	fixed_t this_scale = thing->scale;
 
-	fixed_t ang_scale = FRACUNIT;
+	vector3_t pos;
+
+	R_LerpMobjPosition(thing, &pos);
 
 	// transform the origin point
-	tr_x = thing->x - viewx;
-	tr_y = thing->y - viewy;
+	tr_x = pos.x - viewx;
+	tr_y = pos.y - viewy;
 
 	gxt = FixedMul(tr_x, viewcos);
 	gyt = -FixedMul(tr_y, viewsin);
@@ -1231,11 +1235,11 @@ static void R_ProjectSprite(mobj_t *thing)
 	if (sprframe->rotate != SRF_SINGLE || papersprite)
 	{
 		if (thing->player)
-			ang = R_PointToAngle (thing->x, thing->y) - thing->player->frameangle;
+			ang = R_PointToAngle(pos.x, pos.y) - R_LerpAngle(thing->player, frameangle);
+		else if (thing->flags & (MF_NOTHINK|MF_SCENERY))
+			ang = R_PointToAngle(pos.x, pos.y) - thing->angle;
 		else
-			ang = R_PointToAngle (thing->x, thing->y) - thing->angle;
-		if (papersprite)
-			ang_scale = abs(FINESINE(ang>>ANGLETOFINESHIFT));
+			ang = R_PointToAngle(pos.x, pos.y) - R_LerpAngle(thing, angle);
 	}
 
 	if (sprframe->rotate == SRF_SINGLE)
@@ -1273,27 +1277,11 @@ static void R_ProjectSprite(mobj_t *thing)
 	else
 		offset = -spritecachedinfo[lump].offset;
 	offset = FixedMul(offset, this_scale);
-	tx += FixedMul(offset, ang_scale);
-	x1 = (centerxfrac + FixedMul (tx,xscale)) >>FRACBITS;
-
-	// off the right side?
-	if (x1 > viewwidth)
-		return;
-
 	offset2 = FixedMul(spritecachedinfo[lump].width, this_scale);
-	tx += FixedMul(offset2, ang_scale);
-	x2 = ((centerxfrac + FixedMul (tx,xscale)) >> FRACBITS) - 1;
-
-	// off the left side
-	if (x2 < 0)
-		return;
 
 	if (papersprite)
 	{
-		fixed_t yscale2, cosmul, sinmul, tz2;
-
-		if (x2 <= x1)
-			return;
+		fixed_t xscale2, yscale2, cosmul, sinmul, tz2;
 
 		if (ang >= ANGLE_180)
 		{
@@ -1312,6 +1300,16 @@ static void R_ProjectSprite(mobj_t *thing)
 		yscale = FixedDiv(projectiony, tz);
 		if (yscale < 64) return; // Fix some funky visuals
 
+		gxt = -FixedMul(tr_x, viewsin);
+		gyt = FixedMul(tr_y, viewcos);
+		tx = -(gyt + gxt);
+		xscale = FixedDiv(projection, tz);
+		x1 = (centerxfrac + FixedMul (tx,xscale)) >>FRACBITS;
+
+		// off the right side?
+		if (x1 > viewwidth)
+			return;
+
 		tr_x += FixedMul(offset2, cosmul);
 		tr_y += FixedMul(offset2, sinmul);
 		gxt = FixedMul(tr_x, viewcos);
@@ -1320,11 +1318,23 @@ static void R_ProjectSprite(mobj_t *thing)
 		yscale2 = FixedDiv(projectiony, tz2);
 		if (yscale2 < 64) return; // ditto
 
+		gxt = -FixedMul(tr_x, viewsin);
+		gyt = FixedMul(tr_y, viewcos);
+		tx = -(gyt + gxt);
+		xscale2 = FixedDiv(projection, tz2);
+		x2 = (centerxfrac + FixedMul (tx,xscale2)) >>FRACBITS; x2--;
+
+		// off the left side
+		if (x2 < 0 || x2 <= x1)
+			return;
+
 		if (max(tz, tz2) < FixedMul(MINZ, this_scale)) // non-papersprite clipping is handled earlier
 			return;
 
-		scalestep = (yscale2 - yscale)/(x2 - x1);
+		scalestep = (yscale2 - yscale)/(x2 - x1 + 1);
 		scalestep = scalestep ? scalestep : 1;
+
+		xscale = FixedDiv((x2 - x1 + 1)*FRACUNIT, spritecachedinfo[lump].width/FRACUNIT * this_scale);
 
 		// The following two are alternate sorting methods which might be more applicable in some circumstances. TODO - maybe enable via MF2?
 		// sortscale = max(yscale, yscale2);
@@ -1334,9 +1344,24 @@ static void R_ProjectSprite(mobj_t *thing)
 	{
 		scalestep = 0;
 		yscale = sortscale;
-	}
 
-	xscale = FixedMul(xscale, ang_scale);
+		tx += offset;
+		x1 = (centerxfrac + FixedMul (tx,xscale)) >>FRACBITS;
+
+		// off the right side?
+		if (x1 > viewwidth)
+			return;
+
+		tx += offset2;
+		x2 = ((centerxfrac + FixedMul (tx,xscale)) >> FRACBITS) - 1;
+
+		// off the left side
+		if (x2 < 0)
+			return;
+
+		if (thing->type == MT_SHADOW)
+			yscale = FixedMul(yscale, FixedDiv(abs(pos.z - viewz)*2, tz));
+	}
 
 	// PORTAL SPRITE CLIPPING
 	if (portalrender)
@@ -1354,12 +1379,12 @@ static void R_ProjectSprite(mobj_t *thing)
 		// When vertical flipped, draw sprites from the top down, at least as far as offsets are concerned.
 		// sprite height - sprite topoffset is the proper inverse of the vertical offset, of course.
 		// remember gz and gzt should be seperated by sprite height, not thing height - thing height can be shorter than the sprite itself sometimes!
-		gz = thing->z + thing->height - FixedMul(spritecachedinfo[lump].topoffset, this_scale);
+		gz = pos.z + thing->height - FixedMul(spritecachedinfo[lump].topoffset, this_scale);
 		gzt = gz + FixedMul(spritecachedinfo[lump].height, this_scale);
 	}
 	else
 	{
-		gzt = thing->z + FixedMul(spritecachedinfo[lump].topoffset, this_scale);
+		gzt = pos.z + FixedMul(spritecachedinfo[lump].topoffset, this_scale);
 		gz = gzt - FixedMul(spritecachedinfo[lump].height, this_scale);
 	}
 
@@ -1421,15 +1446,19 @@ static void R_ProjectSprite(mobj_t *thing)
 	vis->scale = yscale; //<<detailshift;
 	vis->sortscale = sortscale;
 	vis->dispoffset = thing->info->dispoffset; // Monster Iestyn: 23/11/15
-	vis->gx = thing->x;
-	vis->gy = thing->y;
+	vis->gx = pos.x;
+	vis->gy = pos.y;
 	vis->gz = gz;
 	vis->gzt = gzt;
 	vis->thingheight = thing->height;
-	vis->pz = thing->z;
+	vis->pz = pos.z;
 	vis->pzt = vis->pz + vis->thingheight;
 	vis->texturemid = vis->gzt - viewz;
 	vis->scalestep = scalestep;
+
+	if (thing->type == MT_SHADOW)
+		vis->texturemid = FixedDiv(vis->texturemid - FixedMul(spritecachedinfo[lump].topoffset, this_scale), FixedDiv(abs(pos.z - viewz)*2, tz))
+		                                           + FixedMul(spritecachedinfo[lump].topoffset, this_scale);
 
 	vis->mobj = thing; // Easy access! Tails 06-07-2002
 

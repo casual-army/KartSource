@@ -1,17 +1,12 @@
-// Emacs style mode select   -*- C++ -*-
+// SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
-//
+// Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
+// Copyright (C) 1999-2019 by Sonic Team Junior.
 //
-// This program is free software; you can redistribute it and/or
-// modify it under the terms of the GNU General Public License
-// as published by the Free Software Foundation; either version 2
-// of the License, or (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
+// This program is free software distributed under the
+// terms of the GNU General Public License, version 2.
+// See the 'LICENSE' file for more details.
 //-----------------------------------------------------------------------------
 /// \file
 /// \brief MD2 Handling
@@ -90,7 +85,6 @@ static void md2_freeModel (model_t *model)
 }
 #endif
 
-
 //
 // load model
 //
@@ -151,7 +145,7 @@ static void PNG_warn(png_structp PNG, png_const_charp pngtext)
 	CONS_Debug(DBG_RENDER, "libpng warning at %p: %s", PNG, pngtext);
 }
 
-static GrTextureFormat_t PNG_Load(const char *filename, int *w, int *h, GLPatch_t *grpatch)
+static GLTextureFormat_t PNG_Load(const char *filename, int *w, int *h, GLPatch_t *grpatch)
 {
 	png_structp png_ptr;
 	png_infop png_info_ptr;
@@ -285,7 +279,7 @@ typedef struct
 	UINT8 filler[54];
 } PcxHeader;
 
-static GrTextureFormat_t PCX_Load(const char *filename, int *w, int *h,
+static GLTextureFormat_t PCX_Load(const char *filename, int *w, int *h,
 	GLPatch_t *grpatch)
 {
 	PcxHeader header;
@@ -544,7 +538,7 @@ void HWR_InitMD2(void)
 				goto md2found;
 			}
 		}
-		// no sprite/player skin name found?!?
+		// no sprite/player skin name found?!?D
 		CONS_Printf("Unknown sprite/player skin %s detected in mdls.dat\n", name);
 md2found:
 		// move on to next line...
@@ -579,7 +573,7 @@ void HWR_AddPlayerMD2(int skin) // For MD2's that were added after startup
 		}
 	}
 
-	// Check for any MD2s that match the names of player skins!
+	// Check for any MD2s that match the names of sprite names!
 	while (fscanf(f, "%19s %31s %f %f", name, filename, &scale, &offset) == 4)
 	{
 		if (stricmp(name, skins[skin].name) == 0)
@@ -837,35 +831,20 @@ static void HWR_GetBlendedTexture(GLPatch_t *gpatch, GLPatch_t *blendgpatch, INT
 
 // -----------------+
 // HWR_DrawMD2      : Draw MD2
-//                  : (monsters, bonuses, weapons, lights, ...)
+//                  :
 // Returns          :
 // -----------------+
-	/*
-	wait/stand
-	death
-	pain
-	walk
-	shoot/fire
 
-	die?
-	atka?
-	atkb?
-	attacka/b/c/d?
-	res?
-	run?
-	*/
-#define NORMALFOG 0x00000000
-#define FADEFOG 0x19000000
 void HWR_DrawMD2(gr_vissprite_t *spr)
 {
-	FSurfaceInfo Surf;
+	md2_t *md2;
 
 	char filename[64];
 	INT32 frame = 0;
 	INT32 nextFrame = -1;
 	FTransform p;
-	md2_t *md2;
-	UINT8 color[4];
+	FSurfaceInfo Surf;
+	vector3_t pos;
 
 	if (!cv_grmdls.value)
 		return;
@@ -873,19 +852,21 @@ void HWR_DrawMD2(gr_vissprite_t *spr)
 	if (spr->precip)
 		return;
 
+	R_LerpMobjPosition(spr->mobj, &pos);
+
 	// MD2 colormap fix
 	// colormap test
 	if (spr->mobj->subsector)
 	{
 		sector_t *sector = spr->mobj->subsector->sector;
-		UINT8 lightlevel = 255;
 		extracolormap_t *colormap = sector->extra_colormap;
+		UINT8 lightlevel = 255;
 
 		if (sector->numlights)
 		{
 			INT32 light;
 
-			light = R_GetPlaneLight(sector, spr->mobj->z + spr->mobj->height, false); // Always use the light at the top instead of whatever I was doing before
+			light = R_GetPlaneLight(sector, pos.z + spr->mobj->height, false); // Always use the light at the top instead of whatever I was doing before
 
 			if (!(spr->mobj->frame & FF_FULLBRIGHT))
 				lightlevel = *sector->lightlist[light].lightlevel;
@@ -903,13 +884,13 @@ void HWR_DrawMD2(gr_vissprite_t *spr)
 		}
 
 		if (colormap)
-			Surf.FlatColor.rgba = HWR_Lighting(lightlevel, colormap->rgba, colormap->fadergba, false, false);
+			HWR_Lighting(&Surf, lightlevel, colormap->rgba, colormap->fadergba);
 		else
-			Surf.FlatColor.rgba = HWR_Lighting(lightlevel, NORMALFOG, FADEFOG, false, false);
+			HWR_NoColormapLighting(&Surf, lightlevel, GL_NORMALFOG, GL_FADEFOG);
 	}
 	else
 	{
-		Surf.FlatColor.rgba = 0xFFFFFFFF;
+		Surf.PolyColor.rgba = 0xFFFFFFFF;
 	}
 
 	// Look at HWR_ProjectSprite for more
@@ -928,11 +909,11 @@ void HWR_DrawMD2(gr_vissprite_t *spr)
 			//durs = tics;
 
 		if (spr->mobj->flags2 & MF2_SHADOW)
-			Surf.FlatColor.s.alpha = 0x40;
+			Surf.PolyColor.s.alpha = 0x40;
 		else if (spr->mobj->frame & FF_TRANSMASK)
 			HWR_TranstableToAlpha((spr->mobj->frame & FF_TRANSMASK)>>FF_TRANSSHIFT, &Surf);
 		else
-			Surf.FlatColor.s.alpha = 0xFF;
+			Surf.PolyColor.s.alpha = 0xFF;
 
 		// dont forget to enabled the depth test because we can't do this like
 		// before: polygons models are not sorted
@@ -967,7 +948,6 @@ void HWR_DrawMD2(gr_vissprite_t *spr)
 				return;
 			}
 		}
-		//HWD.pfnSetBlend(blend); // This seems to actually break translucency?
 		finalscale = md2->scale;
 		//Hurdler: arf, I don't like that implementation at all... too much crappy
 		gpatch = md2->grpatch;
@@ -1058,13 +1038,13 @@ void HWR_DrawMD2(gr_vissprite_t *spr)
 #endif
 
 		//Hurdler: it seems there is still a small problem with mobj angle
-		p.x = FIXED_TO_FLOAT(spr->mobj->x);
-		p.y = FIXED_TO_FLOAT(spr->mobj->y)+md2->offset;
+		p.x = FIXED_TO_FLOAT(pos.x);
+		p.y = FIXED_TO_FLOAT(pos.y)+md2->offset;
 
 		if (spr->mobj->eflags & MFE_VERTICALFLIP)
-			p.z = FIXED_TO_FLOAT(spr->mobj->z + spr->mobj->height);
+			p.z = FIXED_TO_FLOAT(pos.z + spr->mobj->height);
 		else
-			p.z = FIXED_TO_FLOAT(spr->mobj->z);
+			p.z = FIXED_TO_FLOAT(pos.z);
 
 		if (spr->mobj->skin && spr->mobj->sprite == SPR_PLAY)
 			sprdef = &((skin_t *)spr->mobj->skin)->spritedef;
@@ -1077,14 +1057,27 @@ void HWR_DrawMD2(gr_vissprite_t *spr)
 		{
 			fixed_t anglef;
 			if (spr->mobj->player)
-				anglef = AngleFixed(spr->mobj->player->frameangle);
-			else
+			{
+				unsigned f = spr->mobj->frame & FF_FRAMEMASK;
+				anglef = AngleFixed(R_LerpAngle(spr->mobj->player, frameangle));
+
+				// Smooth drifting rotations
+				if (f == 14 || f == 15)
+					anglef += 45*FRACUNIT;
+				else if (f == 12 || f == 13)
+					anglef -= 45*FRACUNIT;
+				anglef += spr->mobj->player->kartstuff[k_drift] * 9*FRACUNIT;
+			}
+			else if (spr->mobj->flags & (MF_NOTHINK|MF_SCENERY))
 				anglef = AngleFixed(spr->mobj->angle);
+			else
+				anglef = AngleFixed(R_LerpAngle(spr->mobj, angle));
+
 			p.angley = FIXED_TO_FLOAT(anglef);
 		}
 		else
 		{
-			const fixed_t anglef = AngleFixed((R_PointToAngle(spr->mobj->x, spr->mobj->y))-ANGLE_180);
+			const fixed_t anglef = AngleFixed((R_PointToAngle(pos.x, pos.y))-ANGLE_180);
 			p.angley = FIXED_TO_FLOAT(anglef);
 		}
 		p.anglex = 0.0f;
@@ -1103,11 +1096,6 @@ void HWR_DrawMD2(gr_vissprite_t *spr)
 		}
 #endif
 
-		color[0] = Surf.FlatColor.s.red;
-		color[1] = Surf.FlatColor.s.green;
-		color[2] = Surf.FlatColor.s.blue;
-		color[3] = Surf.FlatColor.s.alpha;
-
 		// SRB2CBTODO: MD2 scaling support
 		finalscale *= FIXED_TO_FLOAT(spr->mobj->scale);
 
@@ -1116,7 +1104,8 @@ void HWR_DrawMD2(gr_vissprite_t *spr)
 		p.mirror = atransform.mirror; // from Kart
 #endif
 
-		HWD.pfnDrawModel(md2->model, frame, durs, tics, nextFrame, &p, finalscale, flip, color);
+		HWD.pfnSetShader(4);	// model shader
+		HWD.pfnDrawModel(md2->model, frame, durs, tics, nextFrame, &p, finalscale, flip, &Surf);
 	}
 }
 
