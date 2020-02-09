@@ -3442,7 +3442,7 @@ void P_SaveNetGame(void)
 		}
 	}
 */
-	P_NetArchivePlayers();
+//	P_NetArchivePlayers();
 
 /*
 	if (gamestate == GS_LEVEL)
