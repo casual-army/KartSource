@@ -35,7 +35,7 @@
 #define VANILLA_GT_MATCH 3
 #endif
 
-#define VANILLAJOINNEXTROUND
+//#define VANILLAJOINNEXTROUND
 
 // Networking and tick handling related.
 #define BACKUPTICS 32
