@@ -1092,7 +1092,7 @@ static void SV_AcknowledgeResynchAck(INT32 node, UINT8 rsg)
 static INT16 Consistancy(void);
 
 #ifndef NONET
-//#define JOININGAME
+#define JOININGAME
 #endif
 
 typedef enum
