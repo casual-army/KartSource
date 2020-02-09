@@ -2406,7 +2406,11 @@ static void CL_ConnectToServer(boolean viams)
 	{
 		// If the connection was aborted for some reason, leave
 #ifndef NONET
+	#ifdef JOININGAME
 		if (!CL_ServerConnectionTicker(viams, tmpsave, &oldtic, &asksent))
+	#else
+		if (!CL_ServerConnectionTicker(viams, (char*)NULL, &oldtic, &asksent))
+	#endif
 #else
 		if (!CL_ServerConnectionTicker(viams, (char*)NULL, &oldtic, (tic_t *)NULL))
 #endif
