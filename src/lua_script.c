@@ -1026,6 +1026,7 @@ void LUA_Archive(void)
 		ArchiveExtVars(&players[i], "player");
 	}
 
+/*
 	if (gamestate == GS_LEVEL)
 	{
 		for (th = thinkercap.next; th != &thinkercap; th = th->next)
@@ -1036,6 +1037,8 @@ void LUA_Archive(void)
 				ArchiveExtVars(th, "mobj");
 			}
 	}
+*/
+
 	WRITEUINT32(save_p, UINT32_MAX); // end of mobjs marker, replaces mobjnum.
 
 	LUAh_NetArchiveHook(NetArchive); // call the NetArchive hook in archive mode
